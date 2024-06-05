@@ -7,8 +7,8 @@
 //
 
 // This exampe is meant to be run with the python example:
-//              tornado_turiexamples.py 
-//              from the course GitHub repository: tornado_bare, branch sklearn_example
+//              fastapi_turi.py
+//              from the course GitHub repository
 
 
 // if you do not know your local sharing server name try:
