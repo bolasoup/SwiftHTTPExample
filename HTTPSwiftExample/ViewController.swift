@@ -6,49 +6,37 @@
 //  Copyright (c) 2015 Eric Larson. All rights reserved.
 //
 
-// This exampe is meant to be run with the python example:
-//              fastapi_turi.py
+// This example is meant to be run with the python example:
+//              fastapi_turicreate.py
 //              from the course GitHub repository
 
 
-// if you do not know your local sharing server name try:
-//    ifconfig |grep "inet "
-// to see what your public facing IP address is, the ip address can be used here
-
-// CHANGE THIS TO THE URL FOR YOUR LAPTOP
-let SERVER_URL = "http://10.9.130.20:8000" // change this for your server name!!!
 
 import UIKit
 import CoreMotion
 
-class ViewController: UIViewController, URLSessionDelegate {
+class ViewController: UIViewController, ClientDelegate {
     
     // MARK: Class Properties
-    lazy var session: URLSession = {
-        let sessionConfig = URLSessionConfiguration.ephemeral
-        
-        sessionConfig.timeoutIntervalForRequest = 5.0
-        sessionConfig.timeoutIntervalForResource = 8.0
-        sessionConfig.httpMaximumConnectionsPerHost = 1
-        
-        return URLSession(configuration: sessionConfig,
-            delegate: self,
-            delegateQueue:self.operationQueue)
-    }()
     
-    let operationQueue = OperationQueue()
+    // interacting with server
+    let client = MlaasModel() // how we will interact with the server
+    
+    // operation queues
     let motionOperationQueue = OperationQueue()
     let calibrationOperationQueue = OperationQueue()
     
+    // motion data properties
     var ringBuffer = RingBuffer()
-    let animation = CATransition()
     let motion = CMMotionManager()
+    var magThreshold = 0.1
     
-    var magValue = 0.1
+    // state variables
     var isCalibrating = false
-    
     var isWaitingForMotionData = false
     
+    // User Interface properties
+    let animation = CATransition()
     @IBOutlet weak var dsidLabel: UILabel!
     @IBOutlet weak var upArrow: UILabel!
     @IBOutlet weak var rightArrow: UILabel!
@@ -57,82 +45,86 @@ class ViewController: UIViewController, URLSessionDelegate {
     @IBOutlet weak var largeMotionMagnitude: UIProgressView!
     
     // MARK: Class Properties with Observers
-    enum CalibrationStage {
-        case notCalibrating
-        case up
-        case right
-        case down
-        case left
+    enum CalibrationStage:String {
+        case notCalibrating = "notCalibrating"
+        case up = "up"
+        case right = "right"
+        case down = "down"
+        case left = "left"
     }
     
     var calibrationStage:CalibrationStage = .notCalibrating {
         didSet{
-            switch calibrationStage {
-            case .up:
-                self.isCalibrating = true
-                DispatchQueue.main.async{
-                    self.setAsCalibrating(self.upArrow)
-                    self.setAsNormal(self.rightArrow)
-                    self.setAsNormal(self.leftArrow)
-                    self.setAsNormal(self.downArrow)
-                }
-                break
-            case .left:
-                self.isCalibrating = true
-                DispatchQueue.main.async{
-                    self.setAsNormal(self.upArrow)
-                    self.setAsNormal(self.rightArrow)
-                    self.setAsCalibrating(self.leftArrow)
-                    self.setAsNormal(self.downArrow)
-                }
-                break
-            case .down:
-                self.isCalibrating = true
-                DispatchQueue.main.async{
-                    self.setAsNormal(self.upArrow)
-                    self.setAsNormal(self.rightArrow)
-                    self.setAsNormal(self.leftArrow)
-                    self.setAsCalibrating(self.downArrow)
-                }
-                break
-                
-            case .right:
-                self.isCalibrating = true
-                DispatchQueue.main.async{
-                    self.setAsNormal(self.upArrow)
-                    self.setAsCalibrating(self.rightArrow)
-                    self.setAsNormal(self.leftArrow)
-                    self.setAsNormal(self.downArrow)
-                }
-                break
-            case .notCalibrating:
-                self.isCalibrating = false
-                DispatchQueue.main.async{
-                    self.setAsNormal(self.upArrow)
-                    self.setAsNormal(self.rightArrow)
-                    self.setAsNormal(self.leftArrow)
-                    self.setAsNormal(self.downArrow)
-                }
-                break
-            }
+            self.setInterfaceForCalibrationStage()
         }
     }
-    
-    var dsid:Int = 0 {
-        didSet{
-            DispatchQueue.main.async{
-                // update label when set
-                self.dsidLabel.layer.add(self.animation, forKey: nil)
-                self.dsidLabel.text = "Current DSID: \(self.dsid)"
-            }
-        }
-    }
-    
+        
     @IBAction func magnitudeChanged(_ sender: UISlider) {
-        self.magValue = Double(sender.value)
+        self.magThreshold = Double(sender.value)
+    }
+       
+    
+    // MARK: View Controller Life Cycle
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // create reusable animation
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+        animation.type = CATransitionType.fade
+        animation.duration = 0.5
+        
+        // setup core motion handlers
+        startMotionUpdates()
+        
+        // use delegation for interacting with client 
+        client.delegate = self
+        client.updateDsid(3) // set default dsid to start with
+
     }
     
-    // MARK: Core Motion Updates
+    //MARK: UI Buttons
+    @IBAction func getDataSetId(_ sender: AnyObject) {
+        client.getNewDsid() // protocol used to update dsid
+    }
+    
+    @IBAction func startCalibration(_ sender: AnyObject) {
+        self.isWaitingForMotionData = false // dont do anything yet
+        nextCalibrationStage() // kick off the calibration stages
+        
+    }
+    
+    @IBAction func makeModel(_ sender: AnyObject) {
+        client.trainModel()
+    }
+
+}
+
+//MARK: Protocol Required Functions
+extension ViewController {
+    func updateDsid(_ newDsid:Int){
+        // delegate function completion handler
+        DispatchQueue.main.async{
+            // update label when set
+            self.dsidLabel.layer.add(self.animation, forKey: nil)
+            self.dsidLabel.text = "Current DSID: \(newDsid)"
+        }
+    }
+    
+    func receivedPrediction(_ prediction:[String:Any]){
+        if let labelResponse = prediction["prediction"] as? String{
+            print(labelResponse)
+            self.displayLabelResponse(labelResponse)
+        }
+        else{
+            print("Received prediction data without label.")
+        }
+    }
+}
+
+
+//MARK: Motion Extension Functions
+extension ViewController {
+    // Core Motion Updates
     func startMotionUpdates(){
         // some internal inconsistency here: we need to ask the device manager for device
         
@@ -152,7 +144,7 @@ class ViewController: UIViewController, URLSessionDelegate {
                 self.largeMotionMagnitude.progress = Float(mag)/0.2
             }
             
-            if mag > self.magValue {
+            if mag > self.magThreshold {
                 // buffer up a bit more data and then notify of occurrence
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: {
                     self.calibrationOperationQueue.addOperation {
@@ -164,8 +156,7 @@ class ViewController: UIViewController, URLSessionDelegate {
         }
     }
     
-    
-    //MARK: Calibration procedure
+    // Calibration event has occurred, send to server
     func largeMotionEventOccurred(){
         if(self.isCalibrating){
             //send a labeled example
@@ -174,8 +165,8 @@ class ViewController: UIViewController, URLSessionDelegate {
                 self.isWaitingForMotionData = false
                 
                 // send data to the server with label
-                sendFeatures(self.ringBuffer.getDataAsVector(),
-                             withLabel: self.calibrationStage)
+                self.client.sendData(self.ringBuffer.getDataAsVector(),
+                                     withLabel: self.calibrationStage.rawValue)
                 
                 self.nextCalibrationStage()
             }
@@ -186,11 +177,112 @@ class ViewController: UIViewController, URLSessionDelegate {
             {
                 self.isWaitingForMotionData = false
                 //predict a label
-                getPrediction(self.ringBuffer.getDataAsVector())
+                self.client.sendData(self.ringBuffer.getDataAsVector())
                 // dont predict again for a bit
                 setDelayedWaitingToTrue(2.0)
                 
             }
+        }
+    }
+}
+
+//MARK: Calibration UI Functions
+extension ViewController {
+    
+    func setDelayedWaitingToTrue(_ time:Double){
+        DispatchQueue.main.asyncAfter(deadline: .now() + time, execute: {
+            self.isWaitingForMotionData = true
+        })
+    }
+    
+    func setAsCalibrating(_ label: UILabel){
+        label.layer.add(animation, forKey:nil)
+        label.backgroundColor = UIColor.red
+    }
+    
+    func setAsNormal(_ label: UILabel){
+        label.layer.add(animation, forKey:nil)
+        label.backgroundColor = UIColor.white
+    }
+    
+    // blink the UILabel
+    func blinkLabel(_ label:UILabel){
+        DispatchQueue.main.async {
+            self.setAsCalibrating(label)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
+                self.setAsNormal(label)
+            })
+        }
+    }
+    
+    func displayLabelResponse(_ response:String){
+        switch response {
+        case "['up']","up":
+            blinkLabel(upArrow)
+            break
+        case "['down']","down":
+            blinkLabel(downArrow)
+            break
+        case "['left']","left":
+            blinkLabel(leftArrow)
+            break
+        case "['right']","right":
+            blinkLabel(rightArrow)
+            break
+        default:
+            print("Unknown")
+            break
+        }
+    }
+    
+    func setInterfaceForCalibrationStage(){
+        switch calibrationStage {
+        case .up:
+            self.isCalibrating = true
+            DispatchQueue.main.async{
+                self.setAsCalibrating(self.upArrow)
+                self.setAsNormal(self.rightArrow)
+                self.setAsNormal(self.leftArrow)
+                self.setAsNormal(self.downArrow)
+            }
+            break
+        case .left:
+            self.isCalibrating = true
+            DispatchQueue.main.async{
+                self.setAsNormal(self.upArrow)
+                self.setAsNormal(self.rightArrow)
+                self.setAsCalibrating(self.leftArrow)
+                self.setAsNormal(self.downArrow)
+            }
+            break
+        case .down:
+            self.isCalibrating = true
+            DispatchQueue.main.async{
+                self.setAsNormal(self.upArrow)
+                self.setAsNormal(self.rightArrow)
+                self.setAsNormal(self.leftArrow)
+                self.setAsCalibrating(self.downArrow)
+            }
+            break
+            
+        case .right:
+            self.isCalibrating = true
+            DispatchQueue.main.async{
+                self.setAsNormal(self.upArrow)
+                self.setAsCalibrating(self.rightArrow)
+                self.setAsNormal(self.leftArrow)
+                self.setAsNormal(self.downArrow)
+            }
+            break
+        case .notCalibrating:
+            self.isCalibrating = false
+            DispatchQueue.main.async{
+                self.setAsNormal(self.upArrow)
+                self.setAsNormal(self.rightArrow)
+                self.setAsNormal(self.leftArrow)
+                self.setAsNormal(self.downArrow)
+            }
+            break
         }
     }
     
@@ -225,243 +317,6 @@ class ViewController: UIViewController, URLSessionDelegate {
         }
     }
     
-    func setDelayedWaitingToTrue(_ time:Double){
-        DispatchQueue.main.asyncAfter(deadline: .now() + time, execute: {
-            self.isWaitingForMotionData = true
-        })
-    }
     
-    func setAsCalibrating(_ label: UILabel){
-        label.layer.add(animation, forKey:nil)
-        label.backgroundColor = UIColor.red
-    }
-    
-    func setAsNormal(_ label: UILabel){
-        label.layer.add(animation, forKey:nil)
-        label.backgroundColor = UIColor.white
-    }
-    
-    // MARK: View Controller Life Cycle
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        
-        
-        // create reusable animation
-        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
-        animation.type = CATransitionType.fade
-        animation.duration = 0.5
-        
-        
-        // setup core motion handlers
-        startMotionUpdates()
-        
-        dsid = 1 // set this and it will update UI
-    }
-
-    //MARK: Get New Dataset ID
-    @IBAction func getDataSetId(_ sender: AnyObject) {
-        // create a GET request for a new DSID from server
-        let baseURL = "\(SERVER_URL)/GetNewDatasetId"
-        
-        let getUrl = URL(string: baseURL)
-        let request: URLRequest = URLRequest(url: getUrl!)
-        let dataTask : URLSessionDataTask = self.session.dataTask(with: request,
-            completionHandler:{(data, response, error) in
-                if(error != nil){
-                    print("Response:\n%@",response!)
-                }
-                else{
-                    let jsonDictionary = self.convertDataToDictionary(with: data)
-                    
-                    // This better be an integer
-                    if let dsid = jsonDictionary["dsid"]{
-                        self.dsid = dsid as! Int
-                    }
-                }
-                
-        })
-        
-        dataTask.resume() // start the task
-        
-    }
-    
-    //MARK: Calibration
-    @IBAction func startCalibration(_ sender: AnyObject) {
-        self.isWaitingForMotionData = false // dont do anything yet
-        nextCalibrationStage()
-        
-    }
-    
-    //MARK: Comm with Server
-    func sendFeatures(_ array:[Double], withLabel label:CalibrationStage){
-        let baseURL = "\(SERVER_URL)/AddDataPoint"
-        let postUrl = URL(string: "\(baseURL)")
-        
-        // create a custom HTTP POST request
-        var request = URLRequest(url: postUrl!)
-        
-        // data to send in body of post request (send arguments as json)
-        let jsonUpload:NSDictionary = ["feature":array,
-                                       "label":"\(label)",
-                                       "dsid":self.dsid]
-        
-        
-        let requestBody:Data? = self.convertDictionaryToData(with:jsonUpload)
-        
-        request.httpMethod = "POST"
-        request.httpBody = requestBody
-        
-        let postTask : URLSessionDataTask = self.session.dataTask(with: request,
-            completionHandler:{(data, response, error) in
-                if(error != nil){
-                    if let res = response{
-                        print("Response:\n",res)
-                    }
-                }
-                else{
-                    let jsonDictionary = self.convertDataToDictionary(with: data)
-                    
-                    print(jsonDictionary["feature"]!)
-                    print(jsonDictionary["label"]!)
-                }
-
-        })
-        
-        postTask.resume() // start the task
-    }
-    
-    func getPrediction(_ array:[Double]){
-        let baseURL = "\(SERVER_URL)/PredictOne"
-        let postUrl = URL(string: "\(baseURL)")
-        
-        // create a custom HTTP POST request
-        var request = URLRequest(url: postUrl!)
-        
-        // data to send in body of post request (send arguments as json)
-        let jsonUpload:NSDictionary = ["feature":array, "dsid":self.dsid]
-        
-        
-        let requestBody:Data? = self.convertDictionaryToData(with:jsonUpload)
-        
-        request.httpMethod = "POST"
-        request.httpBody = requestBody
-        
-        let postTask : URLSessionDataTask = self.session.dataTask(with: request,
-                                                                  completionHandler:{
-                        (data, response, error) in
-                        if(error != nil){
-                            if let res = response{
-                                print("Response:\n",res)
-                            }
-                        }
-                        else{ // no error we are aware of
-                            let jsonDictionary = self.convertDataToDictionary(with: data)
-                            
-                            let labelResponse = jsonDictionary["prediction"]!
-                            print(labelResponse)
-                            self.displayLabelResponse(labelResponse as! String)
-
-                        }
-                                                                    
-        })
-        
-        postTask.resume() // start the task
-    }
-    
-    func displayLabelResponse(_ response:String){
-        switch response {
-        case "['up']":
-            blinkLabel(upArrow)
-            break
-        case "['down']":
-            blinkLabel(downArrow)
-            break
-        case "['left']":
-            blinkLabel(leftArrow)
-            break
-        case "['right']":
-            blinkLabel(rightArrow)
-            break
-        default:
-            print("Unknown")
-            break
-        }
-    }
-    
-    func blinkLabel(_ label:UILabel){
-        DispatchQueue.main.async {
-            self.setAsCalibrating(label)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
-                self.setAsNormal(label)
-            })
-        }
-        
-    }
-    
-    @IBAction func makeModel(_ sender: AnyObject) {
-        
-        // create a GET request for server to update the ML model with current data
-        let baseURL = "\(SERVER_URL)/UpdateModel"
-        let query = "?dsid=\(self.dsid)"
-        
-        let getUrl = URL(string: baseURL+query)
-        let request: URLRequest = URLRequest(url: getUrl!)
-        let dataTask : URLSessionDataTask = self.session.dataTask(with: request,
-              completionHandler:{(data, response, error) in
-                // handle error!
-                if (error != nil) {
-                    if let res = response{
-                        print("Response:\n",res)
-                    }
-                }
-                else{
-                    let jsonDictionary = self.convertDataToDictionary(with: data)
-                    
-                    if let resubAcc = jsonDictionary["resubAccuracy"]{
-                        print("Resubstitution Accuracy is", resubAcc)
-                    }
-                }
-                                                                    
-        })
-        
-        dataTask.resume() // start the task
-        
-    }
-    
-    //MARK: JSON Conversion Functions
-    func convertDictionaryToData(with jsonUpload:NSDictionary) -> Data?{
-        do { // try to make JSON and deal with errors using do/catch block
-            let requestBody = try JSONSerialization.data(withJSONObject: jsonUpload, options:JSONSerialization.WritingOptions.prettyPrinted)
-            return requestBody
-        } catch {
-            print("json error: \(error.localizedDescription)")
-            return nil
-        }
-    }
-    
-    func convertDataToDictionary(with data:Data?)->NSDictionary{
-        do { // try to parse JSON and deal with errors using do/catch block
-            let jsonDictionary: NSDictionary =
-                try JSONSerialization.jsonObject(with: data!,
-                                              options: JSONSerialization.ReadingOptions.mutableContainers) as! NSDictionary
-            
-            return jsonDictionary
-            
-        } catch {
-            
-            if let strData = String(data:data!, encoding:String.Encoding(rawValue: String.Encoding.utf8.rawValue)){
-                            print("printing JSON received as string: "+strData)
-            }else{
-                print("json error: \(error.localizedDescription)")
-            }
-            return NSDictionary() // just return empty
-        }
-    }
-
 }
-
-
-
-
 
