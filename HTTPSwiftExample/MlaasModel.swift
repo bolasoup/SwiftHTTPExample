@@ -30,10 +30,10 @@ class MlaasModel: NSObject, URLSessionDelegate{
     private let operationQueue = OperationQueue()
     // default ip, if you are unsure try: ifconfig |grep "inet "
     // to see what your public facing IP address is
-    var server_ip = "10.9.139.100" // this will be the default ip
+    var server_ip = "10.9.166.123" // this will be the default ip
     // create a delegate for using the protocol
     var delegate:ClientDelegate?
-    private var dsid:Int = 3
+    private var dsid:Int = 5
     
     // public access methods
     func updateDsid(_ newDsid:Int){
