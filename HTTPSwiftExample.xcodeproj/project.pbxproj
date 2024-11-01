@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B640E1D52CD55CD00004A52F /* CreateMLActivity.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = B640E1D42CD55CD00004A52F /* CreateMLActivity.mlmodel */; };
+		B640E1D72CD563F30004A52F /* CreateMLActivity.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = B640E1D62CD563F30004A52F /* CreateMLActivity.mlmodel */; };
 		B67483DB1ACA2D6800A9970E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67483DA1ACA2D6800A9970E /* AppDelegate.swift */; };
 		B67483E01ACA2D6800A9970E /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B67483DE1ACA2D6800A9970E /* Main.storyboard */; };
 		B67483E21ACA2D6800A9970E /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B67483E11ACA2D6800A9970E /* Images.xcassets */; };
@@ -17,7 +17,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		B640E1D42CD55CD00004A52F /* CreateMLActivity.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = CreateMLActivity.mlmodel; sourceTree = "<group>"; };
+		B640E1D62CD563F30004A52F /* CreateMLActivity.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = CreateMLActivity.mlmodel; sourceTree = "<group>"; };
 		B67483D51ACA2D6800A9970E /* HTTPSwiftExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HTTPSwiftExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B67483D91ACA2D6800A9970E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B67483DA1ACA2D6800A9970E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -58,7 +58,7 @@
 		B67483D71ACA2D6800A9970E /* HTTPSwiftExample */ = {
 			isa = PBXGroup;
 			children = (
-				B640E1D42CD55CD00004A52F /* CreateMLActivity.mlmodel */,
+				B640E1D62CD563F30004A52F /* CreateMLActivity.mlmodel */,
 				B67483DA1ACA2D6800A9970E /* AppDelegate.swift */,
 				B694B0191FA377E4009A4277 /* RingBuffer.swift */,
 				B68A10671FABAC9700B89471 /* CMLViewController.swift */,
@@ -152,7 +152,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B68A10681FABAC9700B89471 /* CMLViewController.swift in Sources */,
-				B640E1D52CD55CD00004A52F /* CreateMLActivity.mlmodel in Sources */,
+				B640E1D72CD563F30004A52F /* CreateMLActivity.mlmodel in Sources */,
 				B67483DB1ACA2D6800A9970E /* AppDelegate.swift in Sources */,
 				B694B01A1FA377E4009A4277 /* RingBuffer.swift in Sources */,
 			);

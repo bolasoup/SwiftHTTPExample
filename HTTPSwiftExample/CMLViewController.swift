@@ -30,7 +30,7 @@ class CMLViewController: UIViewController {
     @IBOutlet weak var leftArrow: UILabel!
     @IBOutlet weak var largeMotionMagnitude: UIProgressView!
     
-    
+    var stateOut:MLMultiArray? = nil
     lazy var actModel:CreateMLActivity = {
         do{
             let config = MLModelConfiguration()
@@ -73,8 +73,15 @@ extension CMLViewController{
             
             let seq = self.ringBuffer.getDataAsVector()
             
-            guard let stateIn = try? MLMultiArray(shape:[400], dataType:MLMultiArrayDataType.double) else {
+            guard var stateIn = try? MLMultiArray(shape:[400], dataType:MLMultiArrayDataType.double) else {
                 fatalError("Unexpected runtime error. MLMultiArray could not be created")
+            }
+            
+            // if we have a state from the classifier, provide it
+            if let state = stateOut{
+                
+                // if we trained the ML Model classify longer sequences, this might be important. However we trained the example using 50 isolated samples, so we should not provide anythin here.
+                //stateIn = state
             }
             
             let tmp = CreateMLActivityInput(x: seq.x,
@@ -86,6 +93,8 @@ extension CMLViewController{
             guard let outputTuri = try? actModel.prediction(input: tmp) else {
                 fatalError("Unexpected runtime error.")
             }
+            // remember this state for the future
+            stateOut = outputTuri.stateOut
 
             displayLabelResponse(outputTuri.label)
             setDelayedWaitingToTrue(2.0)
