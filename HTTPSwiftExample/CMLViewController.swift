@@ -2,8 +2,8 @@
 //  CMLViewController.swift
 //  HTTPSwiftExample
 //
-//  Created by Eric Larson on 11/2/17.
-//  Copyright © 2017 Eric Larson. All rights reserved.
+//  Created by Eric Larson
+//  Copyright © 2024 Eric Larson. All rights reserved.
 //
 
 import UIKit
@@ -12,7 +12,7 @@ import CoreML
 
 class CMLViewController: UIViewController {
 
-    
+    // Motion data
     var ringBuffer = RingBuffer()
     let animation = CATransition()
     let motion = CMMotionManager()
@@ -30,10 +30,11 @@ class CMLViewController: UIViewController {
     @IBOutlet weak var leftArrow: UILabel!
     @IBOutlet weak var largeMotionMagnitude: UIProgressView!
     
-    lazy var turiModel:TuriModel = {
+    
+    lazy var actModel:CreateMLActivity = {
         do{
             let config = MLModelConfiguration()
-            return try TuriModel(configuration: config)
+            return try CreateMLActivity(configuration: config)
         }catch{
             print(error)
             fatalError("Could not load custom model")
@@ -51,7 +52,53 @@ class CMLViewController: UIViewController {
         self.magValue = Double(sender.value)
     }
     
-    // MARK: Core Motion Updates
+ 
+
+}
+
+//MARK: Local ML Model
+extension CMLViewController{
+    
+    func setDelayedWaitingToTrue(_ time:Double){
+        DispatchQueue.main.asyncAfter(deadline: .now() + time, execute: {
+            self.isWaitingForMotionData = true
+        })
+    }
+    
+    func largeMotionEventOccurred(){
+        
+        if(self.isWaitingForMotionData)
+        {
+            self.isWaitingForMotionData = false
+            
+            let seq = self.ringBuffer.getDataAsVector()
+            
+            guard let stateIn = try? MLMultiArray(shape:[400], dataType:MLMultiArrayDataType.double) else {
+                fatalError("Unexpected runtime error. MLMultiArray could not be created")
+            }
+            
+            let tmp = CreateMLActivityInput(x: seq.x,
+                                            y: seq.y,
+                                            z: seq.z,
+                                            stateIn: stateIn)
+            
+            //predict a label
+            guard let outputTuri = try? actModel.prediction(input: tmp) else {
+                fatalError("Unexpected runtime error.")
+            }
+
+            displayLabelResponse(outputTuri.label)
+            setDelayedWaitingToTrue(2.0)
+        }
+    }
+    
+    
+}
+
+
+// MARK: Core Motion Updates
+extension CMLViewController {
+    
     func startMotionUpdates(){
         // some internal inconsistency here: we need to ask the device manager for device
         
@@ -81,32 +128,11 @@ class CMLViewController: UIViewController {
         }
     }
     
-    
-    //MARK: Calibration procedure
-    func largeMotionEventOccurred(){
-        
-        if(self.isWaitingForMotionData)
-        {
-            self.isWaitingForMotionData = false
-            //predict a label
-            let seq = toMLMultiArray(self.ringBuffer.getDataAsVector())
-            
-            guard let outputTuri = try? turiModel.prediction(sequence: seq) else {
-                fatalError("Unexpected runtime error.")
-            }
+}
 
-            displayLabelResponse(outputTuri.target)
-            setDelayedWaitingToTrue(2.0)
-        }
-    }
-    
-    
-    func setDelayedWaitingToTrue(_ time:Double){
-        DispatchQueue.main.asyncAfter(deadline: .now() + time, execute: {
-            self.isWaitingForMotionData = true
-        })
-    }
-    
+
+//MARK: UI Label Updates
+extension CMLViewController{
     func setAsCalibrating(_ label: UILabel){
         label.layer.add(animation, forKey:nil)
         label.backgroundColor = UIColor.red
@@ -118,21 +144,7 @@ class CMLViewController: UIViewController {
     }
     
     
-    // convert to ML Multi array
-    // https://github.com/akimach/GestureAI-CoreML-iOS/blob/master/GestureAI/GestureViewController.swift
-    private func toMLMultiArray(_ arr: [Double]) -> MLMultiArray {
-        // create an empty multi array
-        guard let sequence = try? MLMultiArray(shape:[150], dataType:MLMultiArrayDataType.double) else {
-            fatalError("Unexpected runtime error. MLMultiArray could not be created")
-        }
-        
-        // populate the multi array with data
-        let size = Int(truncating: sequence.shape[0])
-        for i in 0..<size {
-            sequence[i] = NSNumber(floatLiteral: arr[i])
-        }
-        return sequence
-    }
+    
     
     func displayLabelResponse(_ response:String){
         switch response {
@@ -163,7 +175,4 @@ class CMLViewController: UIViewController {
         }
         
     }
-
-    
-
 }
