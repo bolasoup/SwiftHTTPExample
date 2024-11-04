@@ -97,6 +97,8 @@ extension CMLViewController{
             stateOut = outputTuri.stateOut
 
             displayLabelResponse(outputTuri.label)
+            
+            // only provide another label after 2 seconds
             setDelayedWaitingToTrue(2.0)
         }
     }
