@@ -4,7 +4,7 @@
 //
 //  Created by Eric Larson on 3/30/15.
 //  Copyright (c) 2015 Eric Larson. All rights reserved.
-//
+//  Updated 2024
 
 // This example is meant to be run with the python example:
 //              fastapi_turicreate.py
@@ -18,6 +18,7 @@ import CoreMotion
 class ViewController: UIViewController, ClientDelegate {
     
     // MARK: Class Properties
+    
     
     // interacting with server
     let client = MlaasModel() // how we will interact with the server
@@ -43,6 +44,7 @@ class ViewController: UIViewController, ClientDelegate {
     @IBOutlet weak var downArrow: UILabel!
     @IBOutlet weak var leftArrow: UILabel!
     @IBOutlet weak var largeMotionMagnitude: UIProgressView!
+    @IBOutlet weak var ipTextField: UITextField!
     
     // MARK: Class Properties with Observers
     enum CalibrationStage:String {
@@ -78,7 +80,7 @@ class ViewController: UIViewController, ClientDelegate {
         
         // use delegation for interacting with client 
         client.delegate = self
-        client.updateDsid(3) // set default dsid to start with
+        client.updateDsid(5) // set default dsid to start with
 
     }
     
