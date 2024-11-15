@@ -45,6 +45,7 @@ class ViewController: UIViewController, ClientDelegate {
     @IBOutlet weak var leftArrow: UILabel!
     @IBOutlet weak var largeMotionMagnitude: UIProgressView!
     @IBOutlet weak var ipTextField: UITextField!
+    @IBOutlet weak var ipUpdateButton: UIButton!
     
     // MARK: Class Properties with Observers
     enum CalibrationStage:String {
@@ -99,6 +100,9 @@ class ViewController: UIViewController, ClientDelegate {
         client.trainModel()
     }
 
+    @IBAction func updateIP(_ sender: Any) {
+        self.client.setServerIp(ip: ipTextField.text!)
+    }
 }
 
 //MARK: Protocol Required Functions
@@ -136,6 +140,8 @@ extension ViewController {
         }
     }
     
+
+    
     func handleMotion(_ motionData:CMDeviceMotion?, error:Error?){
         if let accel = motionData?.userAcceleration {
             self.ringBuffer.addNewData(xData: accel.x, yData: accel.y, zData: accel.z)
@@ -157,6 +163,7 @@ extension ViewController {
             }
         }
     }
+    
     
     // Calibration event has occurred, send to server
     func largeMotionEventOccurred(){

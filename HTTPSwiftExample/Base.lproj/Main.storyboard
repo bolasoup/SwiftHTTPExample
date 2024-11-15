@@ -96,9 +96,18 @@
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
                             </textField>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="buK-ft-FeD">
+                                <rect key="frame" x="271" y="106.66666666666667" width="99" height="35.000000000000014"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="filled" title="Update IP"/>
+                                <connections>
+                                    <action selector="updateIP:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="tNB-EK-QIc"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
+                            <constraint firstItem="buK-ft-FeD" firstAttribute="leading" secondItem="Kbj-nL-Wh1" secondAttribute="trailing" constant="10" id="23N-7A-3r2"/>
                             <constraint firstItem="hat-ey-qs0" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" id="8bW-kw-0Qe"/>
                             <constraint firstItem="hUu-DN-Kwe" firstAttribute="top" secondItem="hat-ey-qs0" secondAttribute="bottom" constant="24" id="GLz-mW-zad"/>
                             <constraint firstItem="hUu-DN-Kwe" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" id="GQz-pu-fvz"/>
@@ -106,6 +115,7 @@
                             <constraint firstItem="hnx-72-uCy" firstAttribute="centerX" secondItem="kh9-bI-dsS" secondAttribute="centerX" id="JaZ-Dz-f0H"/>
                             <constraint firstItem="yA7-nd-seT" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" id="JmY-fg-drR"/>
                             <constraint firstItem="xyW-Em-uOE" firstAttribute="top" secondItem="CF6-hb-3Kh" secondAttribute="bottom" constant="27" id="KtG-P0-Rou"/>
+                            <constraint firstItem="buK-ft-FeD" firstAttribute="centerY" secondItem="Kbj-nL-Wh1" secondAttribute="centerY" id="Kuf-HN-Br0"/>
                             <constraint firstItem="hat-ey-qs0" firstAttribute="top" secondItem="hnx-72-uCy" secondAttribute="bottom" constant="76" id="QPZ-eD-XGI"/>
                             <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="YSY-pP-JYh" secondAttribute="trailingMargin" id="QYP-Cb-bNv"/>
                             <constraint firstItem="Kbj-nL-Wh1" firstAttribute="centerX" secondItem="kh9-bI-dsS" secondAttribute="centerX" id="R5T-xy-0lt"/>
@@ -133,6 +143,7 @@
                         <outlet property="downArrow" destination="xyW-Em-uOE" id="InM-Bs-xaV"/>
                         <outlet property="dsidLabel" destination="yA7-nd-seT" id="pMu-dh-28l"/>
                         <outlet property="ipTextField" destination="Kbj-nL-Wh1" id="H4v-U7-nL1"/>
+                        <outlet property="ipUpdateButton" destination="buK-ft-FeD" id="5EZ-We-8zZ"/>
                         <outlet property="largeMotionMagnitude" destination="hUu-DN-Kwe" id="oWd-Qb-Qtq"/>
                         <outlet property="leftArrow" destination="YSY-pP-JYh" id="tST-zn-Nl1"/>
                         <outlet property="rightArrow" destination="yvq-UU-Czy" id="RQ7-Cu-A6a"/>
